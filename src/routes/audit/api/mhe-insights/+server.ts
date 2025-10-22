@@ -8,12 +8,21 @@ function getLocaleFromRequest(request: Request): string {
   const cookies = request.headers.get('cookie');
   const acceptLanguage = request.headers.get('accept-language');
   
+  // Define valid languages for robust checking
+  const validLanguages = ['en', 'de', 'tr'];
+
   // First try from cookies
   if (cookies) {
     const languageCookie = cookies.split(';').find(cookie => cookie.trim().startsWith('language='));
     if (languageCookie) {
-      const language = languageCookie.split('=')[1].trim();
-      if (language === 'de' || language === 'tr') return language;
+      const parts = languageCookie.split('=');
+      // Check for two parts and validate the language
+      if (parts.length > 1) {
+        const language = parts[1].trim();
+        if (validLanguages.includes(language)) {
+          return language;
+        }
+      }
     }
   }
   
@@ -31,7 +40,7 @@ const genAI = new GoogleGenerativeAI(PRIVATE_GEMINI_API_KEY);
 
 // Define the MHE-specific system instructions for different languages
 const systemInstructions = {
-  en: `You are MinuteWalk AI, an expert Material Handling Equipment (MHE) consultant specializing in equipment safety, maintenance, and operational efficiency. Your role is to assist users of the MinuteWalk platform by providing insights, suggestions, and analysis for MHE audits.
+  en: `You are MinuteWalk AI, an expert Material Handling Equipment (MHE) consultant specializing in equipment safety, maintenance, and operational efficiency. Your role is to assist users of the MinuteWalk platform by providing insights, suggestions, and analysis for MHE audits.
 
 CORE CAPABILITIES:
 - Analyze MHE audit responses and photos to identify equipment issues and safety concerns
@@ -47,27 +56,27 @@ RESPONSE PARAMETERS:
 - Maintain consistent terminology with MHE principles and standards
 - Format responses in clear sections: Observation, Analysis, Recommendations
 - When analyzing photos:
-  * Describe what you see in the photo
-  * Identify any equipment issues or safety concerns
-  * Point out non-compliance with standards
-  * Note positive aspects and good practices
-  * Suggest specific improvements based on visual evidence
+  * Describe what you see in the photo
+  * Identify any equipment issues or safety concerns
+  * Point out non-compliance with standards
+  * Note positive aspects and good practices
+  * Suggest specific improvements based on visual evidence
 - Include estimated impact levels (High/Medium/Low) for suggested improvements
 - Prioritize recommendations based on safety risk and operational impact
 
 PHOTO ANALYSIS GUIDELINES:
 - Start with objective description of what's visible
 - Look for:
-  * Equipment damage or defects
-  * Missing or damaged safety features
-  * Improper operation or positioning
-  * Maintenance issues (leaks, wear, etc.)
-  * Operator compliance with safety procedures
-  * Environmental factors affecting equipment operation
+  * Equipment damage or defects
+  * Missing or damaged safety features
+  * Improper operation or positioning
+  * Maintenance issues (leaks, wear, etc.)
+  * Operator compliance with safety procedures
+  * Environmental factors affecting equipment operation
 - Compare against industry standards and best practices
 - Provide specific recommendations based on visual evidence`,
-  
-  de: `Du bist MinuteWalk AI, ein Experte für Materialumschlaggeräte (MHE), spezialisiert auf Gerätesicherheit, Wartung und Betriebseffizienz. Deine Aufgabe ist es, Benutzer der MinuteWalk-Plattform durch Einblicke, Vorschläge und Analysen für MHE-Audits zu unterstützen.
+  
+  de: `Du bist MinuteWalk AI, ein Experte für Materialumschlaggeräte (MHE), spezialisiert auf Gerätesicherheit, Wartung und Betriebseffizienz. Deine Aufgabe ist es, Benutzer der MinuteWalk-Plattform durch Einblicke, Vorschläge und Analysen für MHE-Audits zu unterstützen.
 
 KERNFÄHIGKEITEN:
 - Analysiere MHE-Audit-Antworten und Fotos, um Geräteprobleme und Sicherheitsbedenken zu identifizieren
@@ -83,27 +92,27 @@ ANTWORTPARAMETER:
 - Verwende konsistente Terminologie mit MHE-Prinzipien und -Standards
 - Formatiere Antworten in klaren Abschnitten: Beobachtung, Analyse, Empfehlungen
 - Bei der Analyse von Fotos:
-  * Beschreibe, was auf dem Foto zu sehen ist
-  * Identifiziere Geräteprobleme oder Sicherheitsbedenken
-  * Weise auf Nichteinhaltung von Standards hin
-  * Bemerke positive Aspekte und gute Praktiken
-  * Schlage spezifische Verbesserungen basierend auf visuellen Beweisen vor
+  * Beschreibe, was auf dem Foto zu sehen ist
+  * Identifiziere Geräteprobleme oder Sicherheitsbedenken
+  * Weise auf Nichteinhaltung von Standards hin
+  * Bemerke positive Aspekte und gute Praktiken
+  * Schlage spezifische Verbesserungen basierend auf visuellen Beweisen vor
 - Füge geschätzte Auswirkungsstufen (Hoch/Mittel/Niedrig) für vorgeschlagene Verbesserungen hinzu
 - Priorisiere Empfehlungen basierend auf Sicherheitsrisiko und betrieblichen Auswirkungen
 
 FOTOANALYSE-RICHTLINIEN:
 - Beginne mit einer objektiven Beschreibung des Sichtbaren
 - Achte auf:
-  * Geräteschäden oder -defekte
-  * Fehlende oder beschädigte Sicherheitsmerkmale
-  * Unsachgemäßer Betrieb oder Positionierung
-  * Wartungsprobleme (Lecks, Verschleiß usw.)
-  * Einhaltung von Sicherheitsverfahren durch den Bediener
-  * Umweltfaktoren, die den Gerätebetrieb beeinflussen
+  * Geräteschäden oder -defekte
+  * Fehlende oder beschädigte Sicherheitsmerkmale
+  * Unsachgemäßer Betrieb oder Positionierung
+  * Wartungsprobleme (Lecks, Verschleiß usw.)
+  * Einhaltung von Sicherheitsverfahren durch den Bediener
+  * Umweltfaktoren, die den Gerätebetrieb beeinflussen
 - Vergleiche mit Branchenstandards und Best Practices
 - Gib spezifische Empfehlungen basierend auf visuellen Beweisen`,
 
-  tr: `Sen MinuteWalk AI'sın, ekipman güvenliği, bakımı ve operasyonel verimlilik konularında uzmanlaşmış bir Malzeme Taşıma Ekipmanı (MHE) danışmanısın. Görevin, MinuteWalk platformu kullanıcılarına MHE denetimleri için içgörüler, öneriler ve analizler sunarak yardımcı olmaktır.
+  tr: `Sen MinuteWalk AI'sın, ekipman güvenliği, bakımı ve operasyonel verimlilik konularında uzmanlaşmış bir Malzeme Taşıma Ekipmanı (MHE) danışmanısın. Görevin, MinuteWalk platformu kullanıcılarına MHE denetimleri için içgörüler, öneriler ve analizler sunarak yardımcı olmaktır.
 
 TEMEL YETENEKLER:
 - Ekipman sorunlarını ve güvenlik endişelerini belirlemek için MHE denetim yanıtlarını ve fotoğrafları analiz etmek
@@ -119,23 +128,23 @@ YANIT PARAMETRELERİ:
 - MHE prensipleri ve standartları ile tutarlı terminoloji kullan
 - Yanıtları net bölümlerde formatla: Gözlem, Analiz, Öneriler
 - Fotoğrafları analiz ederken:
-  * Fotoğrafta gördüğünü tanımla
-  * Ekipman sorunlarını veya güvenlik endişelerini belirle
-  * Standartlara uyulmamasına işaret et
-  * Olumlu yönleri ve iyi uygulamaları not et
-  * Görsel kanıtlara dayalı belirli iyileştirmeler öner
+  * Fotoğrafta gördüğünü tanımla
+  * Ekipman sorunlarını veya güvenlik endişelerini belirle
+  * Standartlara uyulmamasına işaret et
+  * Olumlu yönleri ve iyi uygulamaları not et
+  * Görsel kanıtlara dayalı belirli iyileştirmeler öner
 - Önerilen iyileştirmeler için tahmini etki seviyelerini ekle (Yüksek/Orta/Düşük)
 - Önerileri güvenlik riski ve operasyonel etkiye göre önceliklendir
 
 FOTOĞRAF ANALİZ YÖNERGELERİ:
 - Görünenlerin nesnel tanımıyla başla
 - Şunları ara:
-  * Ekipman hasarı veya kusurları
-  * Eksik veya hasarlı güvenlik özellikleri
-  * Uygunsuz çalıştırma veya konumlandırma
-  * Bakım sorunları (sızıntılar, aşınma vb.)
-  * Operatörün güvenlik prosedürlerine uyumu
-  * Ekipman çalışmasını etkileyen çevresel faktörler
+  * Ekipman hasarı veya kusurları
+  * Eksik veya hasarlı güvenlik özellikleri
+  * Uygunsuz çalıştırma veya konumlandırma
+  * Bakım sorunları (sızıntılar, aşınma vb.)
+  * Operatörün güvenlik prosedürlerine uyumu
+  * Ekipman çalışmasını etkileyen çevresel faktörler
 - Sektör standartları ve en iyi uygulamalarla karşılaştır
 - Görsel kanıtlara dayalı özel öneriler sun`
 };
@@ -171,7 +180,6 @@ const sectionTitles = {
 // Handler for POST requests
 export const POST: RequestHandler = async ({ request }) => {
   try {
-    // Add more error handling for the request parsing
     let requestData;
     try {
       requestData = await request.json();
@@ -229,10 +237,26 @@ ${titles.followUp}:
     // Add photos to prompt if available
     if (photos?.length) {
       for (const photo of photos) {
+        // --- CRITICAL FIX: Robust Base64 data extraction ---
+        
+        const commaIndex = photo.indexOf(',');
+        if (commaIndex === -1) {
+          console.warn('Skipping photo due to invalid Base64 Data URL format.');
+          continue;
+        }
+        
+        const header = photo.substring(0, commaIndex); 
+        const base64Data = photo.substring(commaIndex + 1); // The raw base64 string
+        
+        // Extract mimeType: everything between 'data:' and the first ';'
+        // Use a more generic regex to capture the MIME type (e.g., image/jpeg)
+        const mimeTypeMatch = header.match(/data:(.*?);/);
+        const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : 'application/octet-stream';
+
         promptParts.push({
           inlineData: {
-            mimeType: photo.split(',')[0].split(':')[1].split(';')[0],
-            data: photo.split(',')[1]
+            mimeType: mimeType,
+            data: base64Data
           }
         });
       }
@@ -267,7 +291,9 @@ ${titles.followUp}:
 
     // Function to check if a string contains a section title
     const containsTitle = (text: string, title: string) => {
-      return text.toLowerCase().includes(title.toLowerCase() + ':');
+      // Check for the title followed by a colon, case-insensitive
+      const regex = new RegExp(`^${title}:`, 'im'); 
+      return regex.test(text.trim());
     };
 
     // Function to extract content after a title
@@ -295,15 +321,16 @@ ${titles.followUp}:
           .filter(line => line.trim())
           .map(rec => {
             try {
-              // More flexible parsing
+              // Extract the main text part (before the first '|')
               const parts = rec.split('|').map(s => s.trim());
-              let text = parts[0]?.replace(/^\d+\.\s*/, '') || '';
+              const text = parts[0]?.replace(/^\d+\.\s*/, '').trim() || '';
               let priority = '';
               let impact = '';
               
+              // Parse priority and impact from the remaining parts
               for (const part of parts.slice(1)) {
                 const lowerPart = part.toLowerCase();
-                // More flexible matching for priority and impact
+                
                 if (lowerPart.includes(titles.priority.toLowerCase())) {
                   priority = part.substring(part.indexOf(':') + 1).trim();
                 } else if (lowerPart.includes(titles.impact.toLowerCase())) {
@@ -319,7 +346,7 @@ ${titles.followUp}:
           })
       : [];
 
-    // Parse follow-up questions with error handling
+    // Parse follow-up questions
     const followUp = followUpSection
       ? followUpSection
           .split('\n')
@@ -337,7 +364,6 @@ ${titles.followUp}:
   } catch (error) {
     // Enhanced error logging
     console.error('MHE AI Analysis Error:', error);
-    console.error('Error details:', JSON.stringify(error, null, 2));
     
     // Return more informative error message
     return json({ 
