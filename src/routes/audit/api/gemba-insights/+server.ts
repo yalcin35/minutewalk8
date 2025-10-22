@@ -8,12 +8,19 @@ function getLocaleFromRequest(request: Request): string {
   const cookies = request.headers.get('cookie');
   const acceptLanguage = request.headers.get('accept-language');
   
+  const validLanguages = ['en', 'de', 'tr'];
+
   // First try from cookies
   if (cookies) {
     const languageCookie = cookies.split(';').find(cookie => cookie.trim().startsWith('language='));
     if (languageCookie) {
-      const language = languageCookie.split('=')[1].trim();
-      if (language === 'de' || language === 'tr') return language;
+      const parts = languageCookie.split('=');
+      if (parts.length > 1) {
+        const language = parts[1].trim();
+        if (validLanguages.includes(language)) {
+          return language;
+        }
+      }
     }
   }
   
@@ -27,6 +34,9 @@ function getLocaleFromRequest(request: Request): string {
   return 'en';
 }
 
+const genAI = new GoogleGenerativeAI(PRIVATE_GEMINI_API_KEY);
+
+// Define the Gemba-specific system instructions for different languages
 const systemInstructions = {
   en: `You are MinuteWalk AI, an expert Lean Manufacturing and Gemba Walk consultant specializing in process improvement, waste elimination, and operational excellence. Your role is to assist users of the MinuteWalk platform by providing insights, suggestions, and analysis for Gemba Walk audits.
 
@@ -140,6 +150,7 @@ FOTOĞRAF ANALİZ YÖNERGELERİ:
 - Görsel kanıtlara dayalı özel öneriler sun`
 };
 
+// Translation map for response section titles
 const sectionTitles = {
   en: {
     observation: 'Observation',
@@ -167,76 +178,29 @@ const sectionTitles = {
   }
 };
 
+// Handler for POST requests
 export const POST: RequestHandler = async ({ request }) => {
   try {
-    // Step 1: Verify API key
-    console.log('Step 1: Checking API key...');
-    if (!PRIVATE_GEMINI_API_KEY) {
-      console.error('❌ PRIVATE_GEMINI_API_KEY is not set!');
-      return json({ 
-        error: 'API key not configured',
-        details: 'PRIVATE_GEMINI_API_KEY is missing from environment variables'
-      }, { status: 500 });
-    }
-    console.log('✅ API key found');
-
-    // Step 2: Parse request
-    console.log('Step 2: Parsing request...');
     let requestData;
     try {
       requestData = await request.json();
-      console.log('✅ Request parsed successfully');
-      console.log('Request data:', { 
-        hasQuestion: !!requestData.question,
-        hasRating: !!requestData.rating,
-        hasNotes: !!requestData.notes,
-        photoCount: requestData.photos?.length || 0
-      });
     } catch (e) {
-      console.error('❌ Error parsing request JSON:', e);
-      return json({ 
-        error: 'Invalid request format',
-        details: e instanceof Error ? e.message : 'Unable to parse JSON'
-      }, { status: 400 });
+      console.error('Error parsing request JSON:', e);
+      return json({ error: 'Invalid request format' }, { status: 400 });
     }
     
     const { question, rating, notes, photos } = requestData;
-
-    // Validate required fields
-    if (!question || rating === undefined || rating === null) {
-      console.error('❌ Missing required fields');
-      return json({ 
-        error: 'Missing required fields',
-        details: 'Question and rating are required'
-      }, { status: 400 });
-    }
     
-    // Step 3: Get locale
-    console.log('Step 3: Getting locale...');
+    // Determine the language from the request
     const locale = getLocaleFromRequest(request);
-    console.log('✅ Locale:', locale);
     const systemInstruction = systemInstructions[locale] || systemInstructions.en;
     const titles = sectionTitles[locale] || sectionTitles.en;
 
-    // Step 4: Initialize Gemini
-    console.log('Step 4: Initializing Gemini model...');
-    let genAI;
-    let model;
-    try {
-      genAI = new GoogleGenerativeAI(PRIVATE_GEMINI_API_KEY);
-      model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
-      console.log('✅ Gemini model initialized');
-    } catch (e) {
-      console.error('❌ Error initializing Gemini:', e);
-      return json({ 
-        error: 'Failed to initialize AI model',
-        details: e instanceof Error ? e.message : 'Unknown initialization error'
-      }, { status: 500 });
-    }
+    // Initialize the model
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-    // Step 5: Prepare prompt
-    console.log('Step 5: Preparing prompt...');
-    const promptParts: any[] = [
+    // Prepare the prompt parts
+    const promptParts = [
       {
         text: `${systemInstruction}
 
@@ -244,7 +208,7 @@ Analyze the following Gemba Walk audit response:
 
 Question: ${question}
 Rating: ${rating}/5
-Notes: ${notes || 'No notes provided'}
+Notes: ${notes}
 
 ${photos?.length ? 'I will also provide photos for analysis. Please examine them carefully and include specific observations about what you see.' : 'No photos provided for analysis.'}
 
@@ -271,101 +235,68 @@ ${titles.followUp}:
       }
     ];
 
-    // Step 6: Add photos if available
+    // Add photos to prompt if available
     if (photos?.length) {
-      console.log(`Step 6: Adding ${photos.length} photos to prompt...`);
-      for (let i = 0; i < photos.length; i++) {
-        try {
-          const photo = photos[i];
-          if (!photo || typeof photo !== 'string' || !photo.includes(',')) {
-            console.warn(`⚠️ Invalid photo format at index ${i}`);
-            continue;
-          }
-          
-          const [mimeTypePart, base64Data] = photo.split(',');
-          const mimeType = mimeTypePart.split(':')[1]?.split(';')[0];
-          
-          if (!mimeType || !base64Data) {
-            console.warn(`⚠️ Could not extract mime type or data from photo ${i}`);
-            continue;
-          }
-          
-          promptParts.push({
-            inlineData: {
-              mimeType: mimeType,
-              data: base64Data
-            }
-          });
-          console.log(`✅ Added photo ${i + 1} (${mimeType})`);
-        } catch (e) {
-          console.error(`❌ Error processing photo ${i}:`, e);
+      for (const photo of photos) {
+        // --- CRITICAL FIX: Base64 data extraction ---
+        
+        const commaIndex = photo.indexOf(',');
+        if (commaIndex === -1) {
+          console.warn('Skipping photo due to invalid Base64 Data URL format.');
+          continue;
         }
+        
+        const header = photo.substring(0, commaIndex); 
+        const base64Data = photo.substring(commaIndex + 1); // The raw base64 string
+        
+        // Extract mimeType: everything between 'data:' and the first ';'
+        const mimeTypeMatch = header.match(/data:(.*?);/);
+        const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : 'application/octet-stream';
+
+        promptParts.push({
+          inlineData: {
+            mimeType: mimeType,
+            data: base64Data
+          }
+        });
       }
-    } else {
-      console.log('Step 6: No photos to add');
     }
 
-    // Step 7: Generate content
-    console.log('Step 7: Calling Gemini API...');
+    // Generate content with error handling
     let text;
     try {
       const result = await model.generateContent(promptParts);
-      console.log('✅ Received response from Gemini');
-      
       const response = await result.response;
       text = response.text();
       
-      console.log('Response length:', text.length);
-      console.log('Response preview:', text.substring(0, 200) + '...');
+      // Log the first part of the response for debugging
+      console.log('Gemba AI response preview:', text.substring(0, 200) + '...');
       
       if (!text || text.trim() === '') {
         throw new Error('Empty response received from AI model');
       }
-      console.log('✅ Response text extracted successfully');
     } catch (e) {
-      console.error('❌ Error generating AI content:', e);
-      
-      // Check for specific Gemini API errors
-      if (e instanceof Error) {
-        if (e.message.includes('API key')) {
-          return json({ 
-            error: 'Invalid API key',
-            details: 'The Gemini API key is invalid or expired'
-          }, { status: 401 });
-        }
-        if (e.message.includes('quota')) {
-          return json({ 
-            error: 'API quota exceeded',
-            details: 'The Gemini API quota has been exceeded'
-          }, { status: 429 });
-        }
-        if (e.message.includes('safety')) {
-          return json({ 
-            error: 'Content blocked',
-            details: 'The content was blocked by safety filters'
-          }, { status: 400 });
-        }
-      }
-      
-      return json({ 
-        error: 'AI content generation failed',
-        details: e instanceof Error ? e.message : 'Unknown error during generation'
-      }, { status: 500 });
+      console.error('Error generating AI content:', e);
+      throw new Error(`AI content generation failed: ${e.message}`);
     }
 
-    // Step 8: Parse response
-    console.log('Step 8: Parsing AI response...');
+    // Parse AI response into sections
     const sections = text.split('\n\n');
     
+    // Extract sections - use more flexible matching approach
     let observation = '';
     let analysis = '';
     let recommendationsSection = '';
     let followUpSection = '';
 
+    // Function to check if a string contains a section title
     const containsTitle = (text: string, title: string) => {
-      return text.toLowerCase().includes(title.toLowerCase() + ':');
+      // Check for the title followed by a colon, case-insensitive
+      const regex = new RegExp(`^${title}:`, 'im'); 
+      return regex.test(text.trim());
     };
 
+    // Function to extract content after a title
     const extractContent = (text: string, title: string) => {
       const regex = new RegExp(`${title}:`, 'i');
       return text.replace(regex, '').trim();
@@ -383,27 +314,23 @@ ${titles.followUp}:
       }
     }
 
-    console.log('Parsed sections:', {
-      hasObservation: !!observation,
-      hasAnalysis: !!analysis,
-      hasRecommendations: !!recommendationsSection,
-      hasFollowUp: !!followUpSection
-    });
-
-    // Parse recommendations
+    // Parse recommendations with more flexible approach
     const recommendations = recommendationsSection
       ? recommendationsSection
           .split('\n')
           .filter(line => line.trim())
           .map(rec => {
             try {
+              // Extract the main text part (before the first '|')
               const parts = rec.split('|').map(s => s.trim());
-              let text = parts[0]?.replace(/^\d+\.\s*/, '') || '';
+              const text = parts[0]?.replace(/^\d+\.\s*/, '').trim() || '';
               let priority = '';
               let impact = '';
               
+              // Parse priority and impact from the remaining parts
               for (const part of parts.slice(1)) {
                 const lowerPart = part.toLowerCase();
+                
                 if (lowerPart.includes(titles.priority.toLowerCase())) {
                   priority = part.substring(part.indexOf(':') + 1).trim();
                 } else if (lowerPart.includes(titles.impact.toLowerCase())) {
@@ -427,13 +354,7 @@ ${titles.followUp}:
           .filter(q => q)
       : [];
 
-    console.log('✅ Response parsed successfully');
-    console.log('Final data:', {
-      recommendationCount: recommendations.length,
-      followUpCount: followUp.length
-    });
-
-    // Step 9: Return response
+    // Return parsed response as JSON
     return json({
       observation,
       analysis,
@@ -441,14 +362,15 @@ ${titles.followUp}:
       followUp,
     });
   } catch (error) {
-    // Final catch-all error handler
-    console.error('❌ Unexpected error:', error);
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    // Enhanced error logging
+    console.error('Gemba AI Analysis Error:', error);
     
+    // Return more informative error message
     return json({ 
-      error: 'An unexpected error occurred',
-      details: error instanceof Error ? error.message : 'Unknown error',
-      type: error instanceof Error ? error.constructor.name : typeof error
-    }, { status: 500 });
+      error: 'Failed to get Gemba AI insights',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, {
+      status: 500,
+    });
   }
 };
