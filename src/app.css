@@ -1,0 +1,93 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --brand-blue: #3B82F6;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Responsive design for different devices */
+@media (max-width: 640px) {
+  .mobile-optimized {
+    font-size: 0.875rem;
+  }
+  
+  /* Adjust touch targets for mobile */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .tablet-optimized {
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 1025px) {
+  .desktop-optimized {
+    font-size: 1rem;
+  }
+}
+
+/* Custom animations */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Hide scrollbar but keep functionality */
+::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+
+/* Brand specific styles */
+.brand-logo {
+  @apply w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-500 flex items-center justify-center text-white;
+}
+
+.brand-logo-sm {
+  @apply w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white;
+}
+
+/* High contrast mode support */
+@media (forced-colors: active) {
+  .high-contrast-aware {
+    border: 1px solid ButtonText;
+  }
+  
+  button, a {
+    forced-color-adjust: none;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
