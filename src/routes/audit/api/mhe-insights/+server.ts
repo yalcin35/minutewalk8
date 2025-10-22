@@ -196,7 +196,7 @@ export const POST: RequestHandler = async ({ request }) => {
     const titles = sectionTitles[locale] || sectionTitles.en;
 
     // Initialize the model
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     // Prepare the prompt parts
     const promptParts = [
