@@ -8,12 +8,21 @@ function getLocaleFromRequest(request: Request): string {
   const cookies = request.headers.get('cookie');
   const acceptLanguage = request.headers.get('accept-language');
   
+  // Define valid languages to prevent unexpected values
+  const validLanguages = ['en', 'de', 'tr'];
+
   // First try from cookies
   if (cookies) {
     const languageCookie = cookies.split(';').find(cookie => cookie.trim().startsWith('language='));
     if (languageCookie) {
-      const language = languageCookie.split('=')[1].trim();
-      if (language === 'de' || language === 'tr') return language;
+      const parts = languageCookie.split('=');
+      // Check for two parts and validate the language
+      if (parts.length > 1) {
+        const language = parts[1].trim();
+        if (validLanguages.includes(language)) {
+          return language;
+        }
+      }
     }
   }
   
@@ -47,24 +56,24 @@ RESPONSE PARAMETERS:
 - Maintain consistent terminology with HSE principles and regulations
 - Format responses in clear sections: Observation, Analysis, Recommendations
 - When analyzing photos:
-  * Describe what you see in the photo
-  * Identify any safety hazards or concerns
-  * Point out non-compliance issues
-  * Note positive aspects and good practices
-  * Suggest specific improvements based on visual evidence
+  * Describe what you see in the photo
+  * Identify any safety hazards or concerns
+  * Point out non-compliance issues
+  * Note positive aspects and good practices
+  * Suggest specific improvements based on visual evidence
 - Include estimated impact levels (High/Medium/Low) for suggested improvements
 - Prioritize recommendations based on risk severity (likelihood × consequence)
 
 PHOTO ANALYSIS GUIDELINES:
 - Start with objective description of what's visible
 - Look for:
-  * Immediate safety hazards (trip hazards, blocked exits, etc.)
-  * PPE usage and compliance
-  * Emergency equipment accessibility
-  * Chemical storage and labeling
-  * Machine guarding and safety devices
-  * Ergonomic issues
-  * Environmental concerns
+  * Immediate safety hazards (trip hazards, blocked exits, etc.)
+  * PPE usage and compliance
+  * Emergency equipment accessibility
+  * Chemical storage and labeling
+  * Machine guarding and safety devices
+  * Ergonomic issues
+  * Environmental concerns
 - Compare against HSE best practices and regulatory requirements
 - Provide specific recommendations based on visual evidence`,
   
@@ -74,7 +83,7 @@ KERNFÄHIGKEITEN:
 - Analysiere HSE-Audit-Antworten und Fotos, um Sicherheitsgefahren und Compliance-Probleme zu identifizieren
 - Führe Benutzer durch HSE-Inspektionen mit branchenspezifischen Einblicken
 - Interpretiere Audit-Ergebnisse und schlage umsetzbare Sicherheitsverbesserungen vor
-- Identifiziere potenzielle Sicherheits-, Gesundheits- oder Umweltrisiken anhand von Fotos
+- Identifiziere potenzielle Verschwendung, Ineffizienzen oder Qualitätsprobleme anhand von Fotos
 - Gib Vorschläge basierend auf HSE-Best-Practices und regulatorischen Anforderungen
 
 ANTWORTPARAMETER:
@@ -84,24 +93,24 @@ ANTWORTPARAMETER:
 - Verwende konsistente Terminologie mit HSE-Prinzipien und -Vorschriften
 - Formatiere Antworten in klaren Abschnitten: Beobachtung, Analyse, Empfehlungen
 - Bei der Analyse von Fotos:
-  * Beschreibe, was auf dem Foto zu sehen ist
-  * Identifiziere Sicherheitsgefahren oder -bedenken
-  * Weise auf Compliance-Probleme hin
-  * Bemerke positive Aspekte und gute Praktiken
-  * Schlage spezifische Verbesserungen basierend auf visuellen Beweisen vor
+  * Beschreibe, was auf dem Foto zu sehen ist
+  * Identifiziere Sicherheitsgefahren oder -bedenken
+  * Weise auf Compliance-Probleme hin
+  * Bemerke positive Aspekte und gute Praktiken
+  * Schlage spezifische Verbesserungen basierend auf visuellen Beweisen vor
 - Füge geschätzte Auswirkungsstufen (Hoch/Mittel/Niedrig) für vorgeschlagene Verbesserungen hinzu
 - Priorisiere Empfehlungen basierend auf Risikoschwere (Wahrscheinlichkeit × Konsequenz)
 
 FOTOANALYSE-RICHTLINIEN:
 - Beginne mit einer objektiven Beschreibung des Sichtbaren
 - Achte auf:
-  * Unmittelbare Sicherheitsgefahren (Stolperfallen, blockierte Ausgänge usw.)
-  * PSA-Nutzung und -Einhaltung
-  * Zugänglichkeit von Notfallausrüstung
-  * Chemikalienlagerung und -kennzeichnung
-  * Maschinenschutzvorrichtungen und Sicherheitseinrichtungen
-  * Ergonomische Probleme
-  * Umweltbedenken
+  * Unmittelbare Sicherheitsgefahren (Stolperfallen, blockierte Ausgänge usw.)
+  * PSA-Nutzung und -Einhaltung
+  * Zugänglichkeit von Notfallausrüstung
+  * Chemikalienlagerung und -kennzeichnung
+  * Maschinenschutzvorrichtungen und Sicherheitseinrichtungen
+  * Ergonomische Probleme
+  * Umweltbedenken
 - Vergleiche mit HSE-Best-Practices und regulatorischen Anforderungen
 - Gib spezifische Empfehlungen basierend auf visuellen Beweisen`,
 
@@ -121,24 +130,24 @@ YANIT PARAMETRELERİ:
 - İSG ilkeleri ve düzenlemeleriyle tutarlı terminoloji kullan
 - Yanıtları net bölümlerde formatla: Gözlem, Analiz, Öneriler
 - Fotoğrafları analiz ederken:
-  * Fotoğrafta gördüğünü tanımla
-  * Güvenlik tehlikelerini veya endişelerini belirle
-  * Uygunluk sorunlarına işaret et
-  * Olumlu yönleri ve iyi uygulamaları not et
-  * Görsel kanıtlara dayalı belirli iyileştirmeler öner
+  * Fotoğrafta gördüğünü tanımla
+  * Güvenlik tehlikelerini veya endişelerini belirle
+  * Uygunluk sorunlarına işaret et
+  * Olumlu yönleri ve iyi uygulamaları not et
+  * Görsel kanıtlara dayalı belirli iyileştirmeler öner
 - Önerilen iyileştirmeler için tahmini etki seviyelerini ekle (Yüksek/Orta/Düşük)
 - Önerileri risk şiddetine göre önceliklendir (olasılık × sonuç)
 
 FOTOĞRAF ANALİZ YÖNERGELERİ:
 - Görünenlerin nesnel tanımıyla başla
 - Şunları ara:
-  * Acil güvenlik tehlikeleri (takılma tehlikeleri, bloke edilmiş çıkışlar vb.)
-  * KKD kullanımı ve uyumu
-  * Acil durum ekipmanı erişilebilirliği
-  * Kimyasal depolama ve etiketleme
-  * Makine koruyucuları ve güvenlik cihazları
-  * Ergonomik sorunlar
-  * Çevresel endişeler
+  * Acil güvenlik tehlikeleri (takılma tehlikeleri, bloke edilmiş çıkışlar vb.)
+  * KKD kullanımı ve uyumu
+  * Acil durum ekipmanı erişilebilirliği
+  * Kimyasal depolama ve etiketleme
+  * Makine koruyucuları ve güvenlik cihazları
+  * Ergonomik sorunlar
+  * Çevresel endişeler
 - İSG en iyi uygulamaları ve yasal gerekliliklerle karşılaştır
 - Görsel kanıtlara dayalı özel öneriler sun`
 };
@@ -174,7 +183,6 @@ const sectionTitles = {
 // Handler for POST requests
 export const POST: RequestHandler = async ({ request }) => {
   try {
-    // Add more error handling for the request parsing
     let requestData;
     try {
       requestData = await request.json();
@@ -232,10 +240,25 @@ ${titles.followUp}:
     // Add photos to prompt if available
     if (photos?.length) {
       for (const photo of photos) {
+        // --- CRITICAL FIX: Robust Base64 data extraction ---
+        
+        const commaIndex = photo.indexOf(',');
+        if (commaIndex === -1) {
+          console.warn('Skipping photo due to invalid Base64 Data URL format.');
+          continue;
+        }
+        
+        const header = photo.substring(0, commaIndex); 
+        const base64Data = photo.substring(commaIndex + 1); // The raw base64 string
+        
+        // Extract mimeType: everything between 'data:' and the first ';'
+        const mimeTypeMatch = header.match(/data:(.*?);/);
+        const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : 'application/octet-stream';
+
         promptParts.push({
           inlineData: {
-            mimeType: photo.split(',')[0].split(':')[1].split(';')[0],
-            data: photo.split(',')[1]
+            mimeType: mimeType,
+            data: base64Data
           }
         });
       }
@@ -270,7 +293,9 @@ ${titles.followUp}:
 
     // Function to check if a string contains a section title
     const containsTitle = (text: string, title: string) => {
-      return text.toLowerCase().includes(title.toLowerCase() + ':');
+      // Check for the title followed by a colon, case-insensitive
+      const regex = new RegExp(`^${title}:`, 'im'); 
+      return regex.test(text.trim());
     };
 
     // Function to extract content after a title
@@ -298,15 +323,16 @@ ${titles.followUp}:
           .filter(line => line.trim())
           .map(rec => {
             try {
-              // More flexible parsing
+              // Extract the main text part (before the first '|')
               const parts = rec.split('|').map(s => s.trim());
-              let text = parts[0]?.replace(/^\d+\.\s*/, '') || '';
+              const text = parts[0]?.replace(/^\d+\.\s*/, '').trim() || '';
               let priority = '';
               let impact = '';
               
+              // Parse priority and impact from the remaining parts
               for (const part of parts.slice(1)) {
                 const lowerPart = part.toLowerCase();
-                // More flexible matching for priority and impact
+                
                 if (lowerPart.includes(titles.priority.toLowerCase())) {
                   priority = part.substring(part.indexOf(':') + 1).trim();
                 } else if (lowerPart.includes(titles.impact.toLowerCase())) {
@@ -322,7 +348,7 @@ ${titles.followUp}:
           })
       : [];
 
-    // Parse follow-up questions with error handling
+    // Parse follow-up questions
     const followUp = followUpSection
       ? followUpSection
           .split('\n')
@@ -340,7 +366,6 @@ ${titles.followUp}:
   } catch (error) {
     // Enhanced error logging
     console.error('HSE AI Analysis Error:', error);
-    console.error('Error details:', JSON.stringify(error, null, 2));
     
     // Return more informative error message
     return json({ 
