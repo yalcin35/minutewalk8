@@ -8,6 +8,7 @@ function getLocaleFromRequest(request: Request): string {
   const cookies = request.headers.get('cookie');
   const acceptLanguage = request.headers.get('accept-language');
   
+  // Define valid languages for robust checking
   const validLanguages = ['en', 'de', 'tr'];
 
   // First try from cookies
@@ -15,6 +16,7 @@ function getLocaleFromRequest(request: Request): string {
     const languageCookie = cookies.split(';').find(cookie => cookie.trim().startsWith('language='));
     if (languageCookie) {
       const parts = languageCookie.split('=');
+      // Check for two parts and validate the language
       if (parts.length > 1) {
         const language = parts[1].trim();
         if (validLanguages.includes(language)) {
@@ -139,7 +141,7 @@ YANIT PARAMETRELERİ:
 FOTOĞRAF ANALİZ YÖNERGELERİ:
 - Görünenlerin nesnel tanımıyla başla
 - Şunları ara:
-  * Süreç akış sorunları
+  * Problemlerin süreç akışı
   * İsraf (hareket, bekleme, envanter, vb.)
   * Görsel yönetim etkinliği
   * Standart iş uyumu
@@ -238,8 +240,7 @@ ${titles.followUp}:
     // Add photos to prompt if available
     if (photos?.length) {
       for (const photo of photos) {
-        // --- CRITICAL FIX: Base64 data extraction ---
-        
+        // --- FIXED: Robust Base64 data extraction for Gemini SDK ---
         const commaIndex = photo.indexOf(',');
         if (commaIndex === -1) {
           console.warn('Skipping photo due to invalid Base64 Data URL format.');
@@ -247,9 +248,8 @@ ${titles.followUp}:
         }
         
         const header = photo.substring(0, commaIndex); 
-        const base64Data = photo.substring(commaIndex + 1); // The raw base64 string
+        const base64Data = photo.substring(commaIndex + 1);
         
-        // Extract mimeType: everything between 'data:' and the first ';'
         const mimeTypeMatch = header.match(/data:(.*?);/);
         const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : 'application/octet-stream';
 
@@ -269,7 +269,6 @@ ${titles.followUp}:
       const response = await result.response;
       text = response.text();
       
-      // Log the first part of the response for debugging
       console.log('Gemba AI response preview:', text.substring(0, 200) + '...');
       
       if (!text || text.trim() === '') {
@@ -283,20 +282,17 @@ ${titles.followUp}:
     // Parse AI response into sections
     const sections = text.split('\n\n');
     
-    // Extract sections - use more flexible matching approach
+    // Extract sections - using flexible matching approach
     let observation = '';
     let analysis = '';
     let recommendationsSection = '';
     let followUpSection = '';
 
-    // Function to check if a string contains a section title
     const containsTitle = (text: string, title: string) => {
-      // Check for the title followed by a colon, case-insensitive
       const regex = new RegExp(`^${title}:`, 'im'); 
       return regex.test(text.trim());
     };
 
-    // Function to extract content after a title
     const extractContent = (text: string, title: string) => {
       const regex = new RegExp(`${title}:`, 'i');
       return text.replace(regex, '').trim();
@@ -314,20 +310,18 @@ ${titles.followUp}:
       }
     }
 
-    // Parse recommendations with more flexible approach
+    // Parse recommendations
     const recommendations = recommendationsSection
       ? recommendationsSection
           .split('\n')
           .filter(line => line.trim())
           .map(rec => {
             try {
-              // Extract the main text part (before the first '|')
               const parts = rec.split('|').map(s => s.trim());
               const text = parts[0]?.replace(/^\d+\.\s*/, '').trim() || '';
               let priority = '';
               let impact = '';
               
-              // Parse priority and impact from the remaining parts
               for (const part of parts.slice(1)) {
                 const lowerPart = part.toLowerCase();
                 
@@ -362,10 +356,8 @@ ${titles.followUp}:
       followUp,
     });
   } catch (error) {
-    // Enhanced error logging
     console.error('Gemba AI Analysis Error:', error);
     
-    // Return more informative error message
     return json({ 
       error: 'Failed to get Gemba AI insights',
       details: error instanceof Error ? error.message : 'Unknown error'
