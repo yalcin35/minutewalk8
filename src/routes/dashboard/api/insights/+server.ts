@@ -168,7 +168,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
     // Build prompt with all available data including language
     const prompt = buildPrompt({ view, stats, dateRange, site, department, sqcdpeData, language });
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = await response.text();
